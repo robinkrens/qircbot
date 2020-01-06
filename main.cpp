@@ -3,73 +3,52 @@
 #include <QFile>
 #include <QTime>
 #include "ircbot.h"
+#include "irclog.h"
 
-void messageHander(QtMsgType type, const QMessageLogContext& context, const QString& message) {
-    QString levelText;
-    bool debug = false; /* TODO: parse command line */
-    switch (type) {
-        case QtDebugMsg:
-            levelText = "Debug";
-            if (!debug)
-                return;
-            break;
-        case QtInfoMsg:
-            levelText = "Info";
-            break;
-        case QtWarningMsg:
-            levelText = "Warning";
-            break;
-        case QtCriticalMsg:
-            levelText = "Critical";
-            break;
-        case QtFatalMsg:
-            levelText = "Fatal";
-        break;
-    }
-
-    QString text = QString("[%1 - %2] [%3] %4")
-            .arg(QDate::currentDate().toString())
-            .arg(QTime::currentTime().toString())
-            .arg(levelText)
-            .arg(message);
-    QFile file("qircbot.log");
-    file.open(QIODevice::WriteOnly | QIODevice::Append);
-    QTextStream textStream(&file);
-    textStream << text << endl;
-
-    QTextStream term(stdout);
-    term << text << endl;
-
-}
+bool IrcLog::debugging{false};
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    qInstallMessageHandler(messageHander);
-
-    IrcBot bot(nullptr,"195.154.200.232", "#woggleweb", "wogglebot", 6667);
-
+    qInstallMessageHandler(IrcLog::messageHander); /* Global message hander (footprint) of QT */
     a.setApplicationName("qircbot");
     a.setApplicationVersion("0.1");
 
+    /* Commandline parser *
+     * Terminals shows more info when invoked with --help */
     QCommandLineParser parser;
     parser.setApplicationDescription("qirbot helper");
        parser.addHelpOption();
        parser.addVersionOption();
-
        parser.addOptions({
-           {"debug",
-            "Enable the debug mode."},
+           {"verbose",
+            "Enable verbose mode. Print all IRC communication to stdout and logfile "},
 
            {{"u", "user"},
-            "use username <user>. Default is 'testbot'",
-            "user",
-            "testbot"},
+            "use username <user>. Default is 'wogglebot'. Note, pick a unique name!",
+            "user", "wogglebot"},
+
+          {{"s", "server"},
+            "use server <server>. Default is 'irc.freenode.net'",
+            "server", "irc.freenode.net"},
+
+          {{"p", "port"},
+            "use port <port>. Default is 8001",
+            "port", "8001"},
+
+          {{"c", "channel"},
+           "join channel <channel>. Default is #woggleweb",
+           "channel", "#woggleweb"},
        });
 
     parser.process(a);
 
-    QFile file("qircbot.log");
+    if (parser.isSet("verbose")) {
+        IrcLog::verbose(true);
+    }
+
+    /* Create (debug) log file */
+    QFile file(LOGFILE);
     file.open(QIODevice::WriteOnly | QIODevice::Append);
     QTextStream textStream(&file);
     textStream << "=== STARTING LOG FOR "
@@ -77,6 +56,11 @@ int main(int argc, char *argv[])
                << " ===" << endl;
     file.close();
 
+    /* Create IRC bot with command line (or default) values */
+    IrcBot bot(parser.value("server"),
+               parser.value("channel"),
+               parser.value("user"),
+               parser.value("port").toInt());
     bot.startup();
 
     return a.exec();

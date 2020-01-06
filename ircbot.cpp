@@ -1,13 +1,14 @@
 #include "ircbot.h"
+#define TIMEOUT 2500
 
-IrcBot::IrcBot(QObject *parent,
+IrcBot::IrcBot(/* QObject *parent , */
                QString s, QString c, QString u, int p)
-    : QObject(parent),
-      socket(new QTcpSocket(this)),
-      server(s),
+    /*: QObject(parent), */
+    :  server(s),
       channel(c),
       user(u),
-      port(p)
+      port(p),
+      socket(new QTcpSocket(this))
 {
 
     connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error),
@@ -15,13 +16,14 @@ IrcBot::IrcBot(QObject *parent,
     connect(socket, &QTcpSocket::readyRead, this, &IrcBot::getLine);
 }
 
+IrcBot::~IrcBot() {
+    delete socket;
+}
 
 void IrcBot::startup() {
 
-    //qInfo().noquote();
-
     socket->connectToHost(server, port);
-    if (socket->waitForConnected(1000))
+    if (socket->waitForConnected(TIMEOUT))
           qInfo() << "Connected to:" << server << ':' << port;
 
     else {
@@ -32,14 +34,15 @@ void IrcBot::startup() {
     QByteArray nick = "NICK ";
     nick.append(user).append("\r\n");
 
-    QByteArray user = "USER ";
-    user.append(user).append(" 0 * :").append(user).append("\r\n");
+    QByteArray usercmd = "USER ";
+    usercmd.append(user).append(" 0 * :").append(user).append("\r\n");
+    //qDebug() << usercmd;
 
     QByteArray jchannel = "JOIN ";
     jchannel.append(channel).append("\r\n");
 
     socket->write(nick);
-    socket->write(user);
+    socket->write(usercmd);
     socket->write(jchannel);
 
     QByteArray firstMsg = "PRIVMSG ";
@@ -67,7 +70,17 @@ void IrcBot::getLine() {
 }
 
 /* Quick and dirty IRC parser
-   See: https://tools.ietf.org/html/rfc1459 for BNF
+ *
+ * An IRC message is structured like this:
+ * [':' <prefix> <SPACE> ] <command> <params> <crlf>
+ * handleLine splits an IRC message in a prefix, command and
+ * argument part and passes it on to handleCmd
+ *
+ * This function is dirty in the sense that it doesn't
+ * completely tokenizes and parses an IRC message, but just
+ * does some basic splitting and calls handleCmd
+ *
+   See: https://tools.ietf.org/html/rfc1459
 */
 void IrcBot::handleLine(QByteArray& buf)
 {
@@ -111,15 +124,18 @@ void IrcBot::handleLine(QByteArray& buf)
     args = buf.mid(cend+1, buf.size() - 1);
     qDebug() << "ARGS" << args;
 
-    handleCmd(cmd, args);
+    handleCmd(prefix, cmd, args);
 
 }
 
-void IrcBot::handleCmd(QByteArray& cmd, QByteArray& args) {
+/*
+ * Handles the most common IRC commands
+ * and replies and/or logs info
+ */
+void IrcBot::handleCmd(QByteArray& pre, QByteArray& cmd, QByteArray& args) {
 
     QByteArray msg;
 
-    /* Reply PING with PONG command and send some text to the channel */
     if (cmd == "PING") {
         qInfo() << "Received PING, sending PONG to" << channel;
         msg = "PONG\r\n";
@@ -130,11 +146,34 @@ void IrcBot::handleCmd(QByteArray& cmd, QByteArray& args) {
         msg.append(channel).append(" :I'm still here").append("\r\n");
         socket->write(msg);
     }
-    else if (cmd == "JOIN") { /* Succesfully joined a channel */
-        qInfo() << "Joined channel" << args;
+    else if (cmd == "JOIN" || cmd == "QUIT" || cmd == "PART") { /* Channel leave, join or quit */
+        /* Get username from prefix */
+        int us = pre.indexOf(':');
+        int ue = pre.indexOf("!", us);
+        QString tmpuser = pre.mid(us+1, ue-1);
+        if (cmd == "JOIN") {
+            qInfo() << tmpuser << "joined channel" << args;
+            if (tmpuser != user) {
+                msg = "PRIVMSG ";
+                msg.append(channel).append(" :Hello ").append(tmpuser).append("\r\n");
+                socket->write(msg);
+            }
+        }
+        else if (cmd == "PART")
+            qInfo() << pre.mid(us+1, ue-1) << "left channel" << args;
+        else if (cmd == "QUIT")
+            qInfo() << pre.mid(us+1, ue-1) << "quit" << args;
     }
+    else if (cmd == "PRIVMSG") {
 
-    /* Implement more commands */
+        int se = args.indexOf(' ');
+
+        int us = pre.indexOf(':');
+        int ue = pre.indexOf("!", us);
+        qInfo() << args.mid(0, se)
+                << pre.mid(us+1, ue-1)
+                << "says" << args.mid(se+1, args.size());
+    }
 
 }
 

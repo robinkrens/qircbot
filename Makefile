@@ -51,9 +51,11 @@ OBJECTS_DIR   = ./
 ####### Files
 
 SOURCES       = main.cpp \
-		ircbot.cpp moc_ircbot.cpp
+		ircbot.cpp \
+		irclog.cpp moc_ircbot.cpp
 OBJECTS       = main.o \
 		ircbot.o \
+		irclog.o \
 		moc_ircbot.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
@@ -133,8 +135,10 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		qircbot.pro ircbot.h main.cpp \
-		ircbot.cpp
+		qircbot.pro ircbot.h \
+		irclog.h main.cpp \
+		ircbot.cpp \
+		irclog.cpp
 QMAKE_TARGET  = qircbot
 DESTDIR       = 
 TARGET        = qircbot
@@ -324,8 +328,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ircbot.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp ircbot.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ircbot.h irclog.h $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp ircbot.cpp irclog.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -377,11 +381,15 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 
 ####### Compile
 
-main.o: main.cpp ircbot.h
+main.o: main.cpp ircbot.h \
+		irclog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
 
 ircbot.o: ircbot.cpp ircbot.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ircbot.o ircbot.cpp
+
+irclog.o: irclog.cpp irclog.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o irclog.o irclog.cpp
 
 moc_ircbot.o: moc_ircbot.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_ircbot.o moc_ircbot.cpp
