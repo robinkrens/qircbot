@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     /* Commandline parser *
      * Terminals shows more info when invoked with --help */
     QCommandLineParser parser;
-    parser.setApplicationDescription("qirbot helper");
+    //parser.setApplicationDescription("qircbot helper");
        parser.addHelpOption();
        parser.addVersionOption();
        parser.addOptions({

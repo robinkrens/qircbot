@@ -11,7 +11,7 @@ IrcBot::IrcBot(/* QObject *parent , */
       socket(new QTcpSocket(this))
 {
 
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error),
+    connect(socket, static_cast<void(QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error),
                   this, &IrcBot::displayError);
     connect(socket, &QTcpSocket::readyRead, this, &IrcBot::getLine);
 }

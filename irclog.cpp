@@ -4,7 +4,6 @@
  * Outputs various information of various levels */
 void IrcLog::messageHander(QtMsgType type, const QMessageLogContext& context, const QString& message) {
     QString levelText;
-    //bool debug = true; /* TODO: parse command line */
     switch (type) {
         case QtDebugMsg:
             levelText = "Debug";
