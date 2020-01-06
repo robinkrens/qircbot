@@ -1,0 +1,13 @@
+Usage: ./qircbot [options]
+qirbot helper
+
+Options:
+  -h, --help               Displays this help.
+  -v, --version            Displays version information.
+  --verbose                Enable verbose mode. Print all IRC communication to
+                           stdout and logfile 
+  -u, --user <user>        use username <user>. Default is 'wogglebot'. Note,
+                           pick a unique name!
+  -s, --server <server>    use server <server>. Default is 'irc.freenode.net'
+  -p, --port <port>        use port <port>. Default is 8001
+  -c, --channel <channel>  join channel <channel>. Default is #woggleweb
